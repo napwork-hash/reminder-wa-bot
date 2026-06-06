@@ -11,6 +11,14 @@ function createMsgAdapter(sock, rawMsg) {
     const jid = rawMsg.key.remoteJid;
     const isGroup = jid.endsWith('@g.us');
 
+    // Resolve phone JID from senderPn or remoteJidAlt, fallback to remoteJid
+    let fromJid = jid;
+    if (rawMsg.senderPn) {
+        fromJid = rawMsg.senderPn.includes('@') ? rawMsg.senderPn : `${rawMsg.senderPn}@s.whatsapp.net`;
+    } else if (rawMsg.key.remoteJidAlt) {
+        fromJid = rawMsg.key.remoteJidAlt;
+    }
+
     // Ambil teks dari berbagai tipe pesan
     const messageContent = rawMsg.message;
     let body = '';
@@ -25,7 +33,8 @@ function createMsgAdapter(sock, rawMsg) {
 
     return {
         body,
-        from: jid,
+        from: fromJid,
+        _jid: jid,
         _isGroup: isGroup,
         _rawMsg: rawMsg,
         getChat: async () => ({ isGroup }),
