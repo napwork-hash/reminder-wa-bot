@@ -78,6 +78,10 @@ kubectl create secret generic wa-bot-secret \
   -n wa-bot
 ```
 
+```
+kubectl create secret generic wa-bot-secret --from-env-file=/home/user/reminder-wa-bot/.env -n wa-bot
+```
+
 ### 2. Terapkan Manifest K3s
 Gunakan manifest yang ada di folder `k3s/`:
 ```bash
