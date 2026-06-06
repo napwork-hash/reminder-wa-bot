@@ -1,5 +1,6 @@
 const COMMANDS = require('../constants/commands');
 const handleSetReminder = require('./setReminder.command');
+const handleSetReminderTo = require('./setReminderTo.command');
 const handleList = require('./listReminder.command');
 const handleEditReminder = require('./editReminder.command');
 const handleDeleteReminder = require('./deleteReminder.command');
@@ -12,6 +13,11 @@ const handleHelp = require('./help.command');
  */
 async function routeCommand(msg) {
     const body = msg.body.trim();
+
+    if (body.startsWith(COMMANDS.SET_REMINDER_TO)) {
+        await handleSetReminderTo(msg);
+        return true;
+    }
 
     if (body.startsWith(COMMANDS.SET_REMINDER)) {
         await handleSetReminder(msg);

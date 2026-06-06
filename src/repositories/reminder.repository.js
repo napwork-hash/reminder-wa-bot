@@ -3,11 +3,11 @@ const { pool } = require('../config/database');
 /**
  * Insert reminder baru
  */
-async function create(chatId, notes, time, scheduleType, days) {
+async function create(chatId, notes, time, scheduleType, days, createdBy = null) {
     const [result] = await pool.execute(
-        `INSERT INTO reminders (chat_id, notes, time, schedule_type, days)
-         VALUES (?, ?, ?, ?, ?)`,
-        [chatId, notes, time, scheduleType, days || null]
+        `INSERT INTO reminders (chat_id, notes, time, schedule_type, days, created_by)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [chatId, notes, time, scheduleType, days || null, createdBy]
     );
     return result.insertId;
 }

@@ -50,6 +50,17 @@ async function runMigration() {
             await pool.execute(statement);
         }
 
+        // Auto-migrate: tambahkan kolom created_by jika belum ada
+        try {
+            await pool.execute('ALTER TABLE reminders ADD COLUMN created_by VARCHAR(100) DEFAULT NULL');
+            console.log('✅ Kolom created_by ditambahkan ke tabel reminders');
+        } catch (err) {
+            // Abaikan error 1060 (Duplicate column name / ER_DUP_FIELDNAME)
+            if (err.errno !== 1060) {
+                console.warn('⚠️ Gagal auto-migrate kolom created_by:', err.message);
+            }
+        }
+
         console.log('✅ Migrasi database berhasil');
     } catch (err) {
         console.error('❌ Gagal migrasi database:', err.message);

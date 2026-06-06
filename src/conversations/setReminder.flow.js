@@ -4,6 +4,7 @@ const { formatDays, formatTime } = require('../utils/formatter.util');
 const { normalizeTime } = require('../utils/date.util');
 const reminderService = require('../services/reminder.service');
 const { refreshCache } = require('../services/scheduler.service');
+const { formatJidToPhone } = require('../utils/parser.util');
 
 /**
  * Mulai flow setReminder: simpan pending state dan tanya jadwal
@@ -31,6 +32,32 @@ async function startSetReminderFlow(msg, notes, time) {
 }
 
 /**
+ * Mulai flow setReminderTo (untuk nomor tertentu)
+ */
+async function startSetReminderToFlow(msg, targetJid, notes, time) {
+    const chatId = msg.from;
+    const normalizedTime = normalizeTime(time);
+
+    setPending(chatId, {
+        step: 'AWAITING_SCHEDULE',
+        type: 'SET_TO',
+        data: { targetJid, notes, time: normalizedTime },
+    });
+
+    const targetPhone = formatJidToPhone(targetJid);
+    const reply =
+        `✅ *Reminder dibuat untuk ${targetPhone}:*\n` +
+        `📝 Notes: ${notes}\n` +
+        `⏰ Jam: ${formatTime(time)}\n\n` +
+        `Pilih jadwal:\n` +
+        `1. Setiap hari\n` +
+        `2. Hari tertentu saja\n\n` +
+        `Balas: *1* atau *2*`;
+
+    await msg.reply(reply);
+}
+
+/**
  * Handle balasan user untuk flow setReminder
  * @returns {boolean} true jika pesan dihandle, false jika bukan bagian dari flow
  */
@@ -41,23 +68,50 @@ async function handleSetReminderFlow(msg, pending) {
     if (pending.step === 'AWAITING_SCHEDULE') {
         if (body === '1') {
             // Setiap hari
+            const isSetTo = pending.type === 'SET_TO';
+            const targetJid = isSetTo ? pending.data.targetJid : chatId;
+            const createdBy = isSetTo ? chatId : null;
+
             await reminderService.createReminder(
-                chatId,
+                targetJid,
                 pending.data.notes,
                 pending.data.time,
                 'daily',
-                null
+                null,
+                createdBy
             );
 
             clearPending(chatId);
             await refreshCache();
 
-            await msg.reply(
-                `✅ *Reminder tersimpan!*\n\n` +
-                `📝 ${pending.data.notes}\n` +
-                `⏰ ${pending.data.time} WIB\n` +
-                `📅 Setiap hari`
-            );
+            const scheduleDesc = 'Setiap hari';
+            if (isSetTo) {
+                const targetPhone = formatJidToPhone(targetJid);
+                await msg.reply(
+                    `✅ *Reminder tersimpan!*\n\n` +
+                    `📝 ${pending.data.notes}\n` +
+                    `⏰ ${pending.data.time} WIB\n` +
+                    `📅 ${scheduleDesc}\n` +
+                    `🎯 Tujuan: ${targetPhone}`
+                );
+
+                // Kirim notif ke target
+                const creatorPhone = formatJidToPhone(chatId);
+                await msg.sendMessage(
+                    targetJid,
+                    `⏰ *Reminder di-set oleh ${creatorPhone}*\n` +
+                    `📝 ${pending.data.notes}\n` +
+                    `⏰ ${pending.data.time} WIB (${scheduleDesc})\n\n` +
+                    `Silahkan lihat di /list`
+                );
+            } else {
+                await msg.reply(
+                    `✅ *Reminder tersimpan!*\n\n` +
+                    `📝 ${pending.data.notes}\n` +
+                    `⏰ ${pending.data.time} WIB\n` +
+                    `📅 ${scheduleDesc}`
+                );
+            }
             return true;
         }
 
@@ -98,27 +152,54 @@ async function handleSetReminderFlow(msg, pending) {
             .sort((a, b) => a - b)
             .join(',');
 
+        const isSetTo = pending.type === 'SET_TO';
+        const targetJid = isSetTo ? pending.data.targetJid : chatId;
+        const createdBy = isSetTo ? chatId : null;
+
         await reminderService.createReminder(
-            chatId,
+            targetJid,
             pending.data.notes,
             pending.data.time,
             'specific',
-            days
+            days,
+            createdBy
         );
 
         clearPending(chatId);
         await refreshCache();
 
-        await msg.reply(
-            `✅ *Reminder tersimpan!*\n\n` +
-            `📝 ${pending.data.notes}\n` +
-            `⏰ ${pending.data.time} WIB\n` +
-            `📅 ${formatDays(days)}`
-        );
+        const scheduleDesc = formatDays(days);
+        if (isSetTo) {
+            const targetPhone = formatJidToPhone(targetJid);
+            await msg.reply(
+                `✅ *Reminder tersimpan!*\n\n` +
+                `📝 ${pending.data.notes}\n` +
+                `⏰ ${pending.data.time} WIB\n` +
+                `📅 ${scheduleDesc}\n` +
+                `🎯 Tujuan: ${targetPhone}`
+            );
+
+            // Kirim notif ke target
+            const creatorPhone = formatJidToPhone(chatId);
+            await msg.sendMessage(
+                targetJid,
+                `⏰ *Reminder di-set oleh ${creatorPhone}*\n` +
+                `📝 ${pending.data.notes}\n` +
+                `⏰ ${pending.data.time} WIB (${scheduleDesc})\n\n` +
+                `Silahkan lihat di /list`
+            );
+        } else {
+            await msg.reply(
+                `✅ *Reminder tersimpan!*\n\n` +
+                `📝 ${pending.data.notes}\n` +
+                `⏰ ${pending.data.time} WIB\n` +
+                `📅 ${scheduleDesc}`
+            );
+        }
         return true;
     }
 
     return false;
 }
 
-module.exports = { startSetReminderFlow, handleSetReminderFlow };
+module.exports = { startSetReminderFlow, startSetReminderToFlow, handleSetReminderFlow };

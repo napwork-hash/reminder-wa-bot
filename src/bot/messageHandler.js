@@ -32,6 +32,9 @@ function createMsgAdapter(sock, rawMsg) {
         reply: async (text) => {
             await sock.sendMessage(jid, { text }, { quoted: rawMsg });
         },
+        sendMessage: async (targetJid, text) => {
+            await sock.sendMessage(targetJid, { text });
+        },
     };
 }
 
@@ -63,7 +66,7 @@ function registerMessageHandler(sock) {
                 if (hasPending(chatId)) {
                     const pending = getPending(chatId);
 
-                    if (pending.type === 'SET') {
+                    if (pending.type === 'SET' || pending.type === 'SET_TO') {
                         const handled = await handleSetReminderFlow(msg, pending);
                         if (handled) continue;
                     }

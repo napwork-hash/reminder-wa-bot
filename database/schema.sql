@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS reminders (
     is_active TINYINT(1) DEFAULT 1,
     last_triggered DATE DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(100) DEFAULT NULL,
     INDEX idx_chat_id (chat_id),
     INDEX idx_active (is_active)
 );

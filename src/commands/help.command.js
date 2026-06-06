@@ -8,6 +8,9 @@ async function handleHelp(msg) {
         `📌 */setReminder [notes] [HH.mm]*\n` +
         `   Buat reminder baru\n` +
         `   Contoh: /setReminder minum obat 11.30\n\n` +
+        `👥 */setReminderTo [nomor] [notes] [HH.mm]*\n` +
+        `   Buat reminder baru untuk nomor orang lain\n` +
+        `   Contoh: /setReminderTo 08123456789 minum obat 11.30\n\n` +
         `📋 */list*\n` +
         `   Lihat semua reminder aktif\n\n` +
         `✏️ */editReminder [nomor] [notes] [HH.mm]*\n` +

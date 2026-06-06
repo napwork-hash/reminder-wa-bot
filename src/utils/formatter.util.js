@@ -1,4 +1,5 @@
 const { DAY_NAMES } = require('../constants/days');
+const { formatJidToPhone } = require('./parser.util');
 
 /**
  * Format list reminder jadi numbered list
@@ -18,7 +19,11 @@ function formatReminderList(reminders) {
                 ? 'Setiap hari'
                 : `${formatDays(r.days)}`;
 
-        return `${num}. 📝 ${r.notes}\n   ⏰ ${time}\n   📅 ${schedule}`;
+        let line = `${num}. 📝 ${r.notes}\n   ⏰ ${time}\n   📅 ${schedule}`;
+        if (r.created_by && r.created_by !== r.chat_id) {
+            line += `\n   👤 Oleh: ${formatJidToPhone(r.created_by)}`;
+        }
+        return line;
     });
 
     return `📋 *Daftar Reminder:*\n\n${lines.join('\n\n')}`;

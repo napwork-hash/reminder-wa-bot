@@ -3,8 +3,8 @@ const reminderRepo = require('../repositories/reminder.repository');
 /**
  * Buat reminder baru
  */
-async function createReminder(chatId, notes, time, scheduleType, days) {
-    const id = await reminderRepo.create(chatId, notes, time, scheduleType, days);
+async function createReminder(chatId, notes, time, scheduleType, days, createdBy = null) {
+    const id = await reminderRepo.create(chatId, notes, time, scheduleType, days, createdBy);
     return id;
 }
 
