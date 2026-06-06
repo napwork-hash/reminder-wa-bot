@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: wa-bot
+---
+# Secret dibuat manual via kubectl:
+# kubectl create secret generic wa-bot-secret -n wa-bot \
+#   --from-literal=DATABASE_URL="mysql://user:pass@host:port/db"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wa-bot-reminder
+  namespace: wa-bot
+  labels:
+    app: wa-bot-reminder
+spec:
+  replicas: 1  # PENTING: Harus 1 replica (WhatsApp session tidak bisa shared)
+  strategy:
+    type: Recreate  # Jangan RollingUpdate, hanya boleh 1 instance aktif
+  selector:
+    matchLabels:
+      app: wa-bot-reminder
+  template:
+    metadata:
+      labels:
+        app: wa-bot-reminder
+    spec:
+      containers:
+        - name: wa-bot
+          image: ghcr.io/napwork-hash/reminder-wa-bot:latest
+          imagePullPolicy: Always
+          envFrom:
+            - secretRef:
+                name: wa-bot-secret
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "512Mi"
+              cpu: "200m"
+          livenessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - "process.exit(0)"
+            initialDelaySeconds: 30
+            periodSeconds: 60
+          restartPolicy: Always

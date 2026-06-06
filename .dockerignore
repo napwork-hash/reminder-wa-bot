@@ -1,0 +1,7 @@
+.wwebjs_auth/
+storage/
+node_modules/
+.env
+.git/
+*.md
+test-*.js

@@ -1,0 +1,23 @@
+{
+  "name": "wa-bot-reminder",
+  "version": "1.0.0",
+  "description": "WhatsApp Reminder Bot with MySQL storage",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "migrate": "node migrate.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.2",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.23",
+    "dotenv": "^16.5.0",
+    "luxon": "^3.7.2",
+    "mysql2": "^3.22.5",
+    "node-cron": "^3.0.3",
+    "pino": "^9.6.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

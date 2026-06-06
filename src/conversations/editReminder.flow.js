@@ -1,0 +1,131 @@
+const { setPending, clearPending } = require('./pendingStore');
+const { isValidDays } = require('../utils/validator.util');
+const { formatDays, formatTime } = require('../utils/formatter.util');
+const { normalizeTime } = require('../utils/date.util');
+const reminderService = require('../services/reminder.service');
+const { refreshCache } = require('../services/scheduler.service');
+
+/**
+ * Mulai flow editReminder: simpan pending state dan tanya jadwal
+ */
+async function startEditReminderFlow(msg, number, notes, time) {
+    const chatId = msg.from;
+    const normalizedTime = normalizeTime(time);
+
+    setPending(chatId, {
+        step: 'AWAITING_SCHEDULE',
+        type: 'EDIT',
+        data: { number, notes, time: normalizedTime },
+    });
+
+    const reply =
+        `✏️ *Edit Reminder #${number}:*\n` +
+        `📝 Notes: ${notes}\n` +
+        `⏰ Jam: ${formatTime(time)}\n\n` +
+        `Pilih jadwal:\n` +
+        `1. Setiap hari\n` +
+        `2. Hari tertentu saja\n\n` +
+        `Balas: *1* atau *2*`;
+
+    await msg.reply(reply);
+}
+
+/**
+ * Handle balasan user untuk flow editReminder
+ * @returns {boolean} true jika pesan dihandle
+ */
+async function handleEditReminderFlow(msg, pending) {
+    const chatId = msg.from;
+    const body = msg.body.trim();
+
+    if (pending.step === 'AWAITING_SCHEDULE') {
+        if (body === '1') {
+            // Setiap hari
+            const success = await reminderService.updateReminder(
+                chatId,
+                pending.data.number,
+                pending.data.notes,
+                pending.data.time,
+                'daily',
+                null
+            );
+
+            clearPending(chatId);
+            await refreshCache();
+
+            if (success) {
+                await msg.reply(
+                    `✅ *Reminder #${pending.data.number} berhasil diupdate!*\n\n` +
+                    `📝 ${pending.data.notes}\n` +
+                    `⏰ ${pending.data.time} WIB\n` +
+                    `📅 Setiap hari`
+                );
+            } else {
+                await msg.reply('❌ Gagal update reminder. Reminder tidak ditemukan.');
+            }
+            return true;
+        }
+
+        if (body === '2') {
+            setPending(chatId, {
+                ...pending,
+                step: 'AWAITING_DAYS',
+            });
+
+            await msg.reply(
+                `Pilih hari (boleh lebih dari satu):\n\n` +
+                `1. Senin\n` +
+                `2. Selasa\n` +
+                `3. Rabu\n` +
+                `4. Kamis\n` +
+                `5. Jumat\n` +
+                `6. Sabtu\n` +
+                `7. Minggu\n\n` +
+                `Contoh balasan: *1,3,5*`
+            );
+            return true;
+        }
+
+        await msg.reply('❌ Pilihan tidak valid. Balas *1* (setiap hari) atau *2* (hari tertentu).');
+        return true;
+    }
+
+    if (pending.step === 'AWAITING_DAYS') {
+        if (!isValidDays(body)) {
+            await msg.reply('❌ Format tidak valid. Balas dengan angka 1-7, pisahkan dengan koma.\nContoh: *1,3,5*');
+            return true;
+        }
+
+        const days = [...new Set(body.split(',').map((d) => parseInt(d.trim(), 10)))]
+            .sort((a, b) => a - b)
+            .join(',');
+
+        const success = await reminderService.updateReminder(
+            chatId,
+            pending.data.number,
+            pending.data.notes,
+            pending.data.time,
+            'specific',
+            days
+        );
+
+        clearPending(chatId);
+        await refreshCache();
+
+        if (success) {
+            await msg.reply(
+                `✅ *Reminder #${pending.data.number} berhasil diupdate!*\n\n` +
+                `📝 ${pending.data.notes}\n` +
+                `⏰ ${pending.data.time} WIB\n` +
+                `📅 ${formatDays(days)}`
+            );
+        } else {
+            await msg.reply('❌ Gagal update reminder. Reminder tidak ditemukan.');
+        }
+        return true;
+    }
+
+    return false;
+}
+
+module.exports = { startEditReminderFlow, handleEditReminderFlow };
