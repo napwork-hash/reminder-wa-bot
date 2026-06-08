@@ -36,13 +36,14 @@ async function startEditReminderFlow(msg, number, notes, time) {
  */
 async function handleEditReminderFlow(msg, pending) {
     const chatId = msg.from;
+    const chatIds = msg.getChatIds ? await msg.getChatIds() : (msg.chatIds || [chatId]);
     const body = msg.body.trim();
 
     if (pending.step === 'AWAITING_SCHEDULE') {
         if (body === '1') {
             // Setiap hari
             const success = await reminderService.updateReminder(
-                chatId,
+                chatIds,
                 pending.data.number,
                 pending.data.notes,
                 pending.data.time,
@@ -101,7 +102,7 @@ async function handleEditReminderFlow(msg, pending) {
             .join(',');
 
         const success = await reminderService.updateReminder(
-            chatId,
+            chatIds,
             pending.data.number,
             pending.data.notes,
             pending.data.time,

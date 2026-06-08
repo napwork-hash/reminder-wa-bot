@@ -35,7 +35,24 @@ async function handleSetReminderTo(msg) {
         return;
     }
 
-    await startSetReminderToFlow(msg, targetJid, parsed.notes, parsed.time);
+    let resolved;
+    try {
+        resolved = msg.resolveJid ? await msg.resolveJid(targetJid) : { jid: targetJid, aliases: [targetJid] };
+    } catch (err) {
+        console.error('Gagal cek nomor tujuan:', err.message);
+        await msg.reply('âŒ Gagal mengecek nomor tujuan ke WhatsApp. Coba lagi beberapa saat.');
+        return;
+    }
+
+    if (!resolved) {
+        await msg.reply(
+            'âŒ Nomor HP tujuan tidak terdaftar di WhatsApp atau tidak bisa dijangkau.\n\n' +
+            'Pastikan nomor tujuan aktif dan gunakan format: *08123456789* atau *628123456789*.'
+        );
+        return;
+    }
+
+    await startSetReminderToFlow(msg, resolved.jid, parsed.notes, parsed.time);
 }
 
 module.exports = handleSetReminderTo;

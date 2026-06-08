@@ -3,6 +3,15 @@ const { getPending, hasPending } = require('../conversations/pendingStore');
 const { handleSetReminderFlow } = require('../conversations/setReminder.flow');
 const { handleEditReminderFlow } = require('../conversations/editReminder.flow');
 
+function toJid(value) {
+    if (!value || typeof value !== 'string') return null;
+    return value.includes('@') ? value : `${value}@s.whatsapp.net`;
+}
+
+function uniqueJids(jids) {
+    return [...new Set(jids.map(toJid).filter(Boolean))];
+}
+
 /**
  * Buat adapter msg agar kompatibel dengan format whatsapp-web.js
  * Sehingga commands dan flows tidak perlu diubah
@@ -11,13 +20,17 @@ function createMsgAdapter(sock, rawMsg) {
     const jid = rawMsg.key.remoteJid;
     const isGroup = jid.endsWith('@g.us');
 
-    // Resolve phone JID from senderPn or remoteJidAlt, fallback to remoteJid
-    let fromJid = jid;
-    if (rawMsg.senderPn) {
-        fromJid = rawMsg.senderPn.includes('@') ? rawMsg.senderPn : `${rawMsg.senderPn}@s.whatsapp.net`;
-    } else if (rawMsg.key.remoteJidAlt) {
-        fromJid = rawMsg.key.remoteJidAlt;
-    }
+    const chatIds = uniqueJids([
+        rawMsg.key.senderPn,
+        rawMsg.senderPn,
+        rawMsg.key.participantPn,
+        rawMsg.key.remoteJidAlt,
+        rawMsg.remoteJidAlt,
+        jid,
+    ]);
+
+    const phoneJid = chatIds.find((candidate) => candidate.endsWith('@s.whatsapp.net'));
+    const fromJid = phoneJid || chatIds[0] || jid;
 
     // Ambil teks dari berbagai tipe pesan
     const messageContent = rawMsg.message;
@@ -31,12 +44,46 @@ function createMsgAdapter(sock, rawMsg) {
             '';
     }
 
+    const resolveJid = async (targetJid) => {
+        if (!sock.onWhatsApp) {
+            return { jid: targetJid, aliases: [targetJid] };
+        }
+
+        const [result] = await sock.onWhatsApp(targetJid);
+        if (!result?.exists) return null;
+
+        const aliases = uniqueJids([result.jid, result.lid, targetJid]);
+        const resolvedJid = toJid(result.jid) || aliases[0] || targetJid;
+
+        return { jid: resolvedJid, aliases };
+    };
+
+    const getChatIds = async () => {
+        const aliases = [...chatIds];
+
+        for (const chatId of chatIds) {
+            try {
+                const resolved = await resolveJid(chatId);
+                if (resolved?.aliases) {
+                    aliases.push(...resolved.aliases);
+                }
+            } catch (err) {
+                console.warn(`Gagal resolve JID ${chatId}:`, err.message);
+            }
+        }
+
+        return uniqueJids(aliases);
+    };
+
     return {
         body,
         from: fromJid,
+        chatIds,
+        getChatIds,
         _jid: jid,
         _isGroup: isGroup,
         _rawMsg: rawMsg,
+        resolveJid,
         getChat: async () => ({ isGroup }),
         reply: async (text) => {
             await sock.sendMessage(jid, { text }, { quoted: rawMsg });

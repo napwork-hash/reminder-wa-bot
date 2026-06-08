@@ -16,9 +16,24 @@ async function create(chatId, notes, time, scheduleType, days, createdBy = null)
  * Ambil semua reminder aktif untuk user tertentu
  */
 async function findByChatId(chatId) {
+    const chatIds = Array.isArray(chatId)
+        ? [...new Set(chatId.filter(Boolean))]
+        : [chatId];
+
+    if (chatIds.length === 0) return [];
+
+    if (chatIds.length > 1) {
+        const placeholders = chatIds.map(() => '?').join(', ');
+        const [rows] = await pool.execute(
+            `SELECT * FROM reminders WHERE chat_id IN (${placeholders}) AND is_active = 1 ORDER BY time ASC`,
+            chatIds
+        );
+        return rows;
+    }
+
     const [rows] = await pool.execute(
         `SELECT * FROM reminders WHERE chat_id = ? AND is_active = 1 ORDER BY time ASC`,
-        [chatId]
+        [chatIds[0]]
     );
     return rows;
 }

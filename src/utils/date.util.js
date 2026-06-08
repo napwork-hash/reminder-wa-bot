@@ -10,12 +10,25 @@ function isTodayMatchingDay(days) {
     // Daily reminder - selalu match
     if (!days) return true;
 
-    const today = nowJakarta().weekday; // luxon: 1=Monday ... 7=Sunday
+    return isMatchingDay(days, nowJakarta());
+}
+
+/**
+ * Cek apakah date tertentu ada di list hari reminder.
+ * @param {string|null} days - Comma-separated "1,3,5" atau null (daily)
+ * @param {import('luxon').DateTime} dateTime
+ * @returns {boolean}
+ */
+function isMatchingDay(days, dateTime) {
+    // Daily reminder - selalu match
+    if (!days) return true;
+
+    const weekday = dateTime.weekday; // luxon: 1=Monday ... 7=Sunday
 
     return days
         .split(',')
         .map((d) => DAY_TO_ISO_WEEKDAY[parseInt(d.trim(), 10)])
-        .includes(today);
+        .includes(weekday);
 }
 
 /**
@@ -53,4 +66,4 @@ function normalizeTime(timeStr) {
     return timeStr.replace('.', ':');
 }
 
-module.exports = { isTodayMatchingDay, isTimeToTrigger, getTodayDateStr, normalizeTime };
+module.exports = { isTodayMatchingDay, isMatchingDay, isTimeToTrigger, getTodayDateStr, normalizeTime };

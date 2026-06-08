@@ -28,8 +28,8 @@ async function handleEditReminder(msg) {
     }
 
     // Cek apakah nomor valid
-    const chatId = msg.from;
-    const reminder = await reminderService.getUserReminderByNumber(chatId, parsed.number);
+    const chatIds = msg.getChatIds ? await msg.getChatIds() : (msg.chatIds || [msg.from]);
+    const reminder = await reminderService.getUserReminderByNumber(chatIds, parsed.number);
 
     if (!reminder) {
         await msg.reply(`❌ Reminder #${parsed.number} tidak ditemukan.\n\nGunakan */list* untuk melihat daftar reminder.`);

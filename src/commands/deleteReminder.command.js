@@ -17,17 +17,17 @@ async function handleDeleteReminder(msg) {
         return;
     }
 
-    const chatId = msg.from;
+    const chatIds = msg.getChatIds ? await msg.getChatIds() : (msg.chatIds || [msg.from]);
 
     // Ambil detail reminder sebelum dihapus untuk konfirmasi
-    const reminder = await reminderService.getUserReminderByNumber(chatId, parsed.number);
+    const reminder = await reminderService.getUserReminderByNumber(chatIds, parsed.number);
 
     if (!reminder) {
         await msg.reply(`❌ Reminder #${parsed.number} tidak ditemukan.\n\nGunakan */list* untuk melihat daftar reminder.`);
         return;
     }
 
-    const success = await reminderService.deleteReminder(chatId, parsed.number);
+    const success = await reminderService.deleteReminder(chatIds, parsed.number);
 
     if (success) {
         await refreshCache();
